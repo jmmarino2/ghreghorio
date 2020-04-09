@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <Button2.h>
 #include "esp_adc_cal.h"
-#include "image/logo.h"
+#include "images/logo.h"
 
 #ifndef TFT_DISPOFF
 #define TFT_DISPOFF 0x28
@@ -34,6 +34,19 @@ char buff[512];
 int vref = 1100;
 int btnCick = false;
 
+
+//  tft.fillRect(0, 0, M_SIZE*239, M_SIZE*131, TFT_GREY);
+//  tft.setTextColor(TFT_BLACK);  // Text colour
+//  tft.fillTriangle(x0, y0, x1, y1, x2, y2, TFT_GREEN);
+//  tft.drawLine(x0, y0, x1, y1, TFT_BLACK);
+//  tft.drawCentreString("0", x0+4, y0-4, 1);
+//  tft.drawString("%RH", M_SIZE*(3 + 230 - 40), M_SIZE*(119 - 20), 2); // Units at bottom right
+//  tft.drawRect(1, M_SIZE*3, M_SIZE*236, M_SIZE*126, TFT_BLACK); // Draw bezel line
+//  tft.drawRightString(buf, 33, M_SIZE*(119 - 20), 2);
+
+
+
+
 //! Long time delay, it is recommended to use shallow sleep, which can effectively reduce the current consumption
 void espDelay(int ms)
 {   
@@ -57,109 +70,10 @@ void showVoltage()
     }
 }
 
-void button_init()
-{
-    btn1.setLongClickHandler([](Button2 & b) {
-        btnCick = false;
-        int r = digitalRead(TFT_BL);
-        tft.fillScreen(TFT_BLACK);
-        tft.setTextColor(TFT_GREEN, TFT_BLACK);
-        tft.setTextDatum(MC_DATUM);
-        tft.drawString("Press again to wake up",  tft.width() / 2, tft.height() / 2 );
-        espDelay(6000);
-        digitalWrite(TFT_BL, !r);
-
-        tft.writecommand(TFT_DISPOFF);
-        tft.writecommand(TFT_SLPIN);
-        esp_sleep_enable_ext1_wakeup(GPIO_SEL_35, ESP_EXT1_WAKEUP_ALL_LOW);
-        esp_deep_sleep_start();
-    });
-    btn1.setPressedHandler([](Button2 & b) {
-        Serial.println("Detect Voltage..");
-        btnCick = true;
-    });
-
-    btn2.setPressedHandler([](Button2 & b) {
-        btnCick = false;
-        Serial.println("btn press wifi scan");
-        wifi_scan();
-    });
-}
-
-void button_loop()
-{
-    btn1.loop();
-    btn2.loop();
-}
-
-void wifi_scan()
-{
-    tft.setTextColor(TFT_GREEN, TFT_BLACK);
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextSize(1);
-
-    tft.drawString("Scan Network", tft.width() / 2, tft.height() / 2);
-
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    delay(100);
-
-    int16_t n = WiFi.scanNetworks();
-    tft.fillScreen(TFT_BLACK);
-    if (n == 0) {
-        tft.drawString("no networks found", tft.width() / 2, tft.height() / 2);
-    } else {
-        tft.setTextDatum(TL_DATUM);
-        tft.setCursor(0, 0);
-        Serial.printf("Found %d net\n", n);
-        for (int i = 0; i < n; ++i) {
-            sprintf(buff,
-                    "[%d]:%s(%d)",
-                    i + 1,
-                    WiFi.SSID(i).c_str(),
-                    WiFi.RSSI(i));
-            tft.println(buff);
-        }
-    }
-    WiFi.mode(WIFI_OFF);
-}
-
 void setup()
 {
     Serial.begin(115200);
     Serial.println("Start");
-    tft.init();
-    tft.setRotation(1);
-    tft.fillScreen(TFT_BLACK);
-    tft.setTextSize(2);
-    tft.setTextColor(TFT_WHITE);
-    tft.setCursor(0, 0);
-    tft.setTextDatum(MC_DATUM);
-    tft.setTextSize(1);
-
-    if (TFT_BL > 0) { // TFT_BL has been set in the TFT_eSPI library in the User Setup file TTGO_T_Display.h
-         pinMode(TFT_BL, OUTPUT); // Set backlight pin to output mode
-         digitalWrite(TFT_BL, TFT_BACKLIGHT_ON); // Turn backlight on. TFT_BACKLIGHT_ON has been set in the TFT_eSPI library in the User Setup file TTGO_T_Display.h
-    }
-
-    tft.setSwapBytes(true);
-    //tft.pushImage(0, 0,  240, 135, ttgo);
-    tft.pushImage(0, 0,  240, 135, tofe);
-    espDelay(5000);
-
-    tft.setRotation(0);
-    int i = 5;
-    while (i--) {
-        tft.fillScreen(TFT_RED);
-        espDelay(1000);
-        tft.fillScreen(TFT_BLUE);
-        espDelay(1000);
-        tft.fillScreen(TFT_GREEN);
-        espDelay(1000);
-    }
-
-    button_init();
 
     esp_adc_cal_characteristics_t adc_chars;
     esp_adc_cal_value_t val_type = esp_adc_cal_characterize((adc_unit_t)ADC_UNIT_1, (adc_atten_t)ADC1_CHANNEL_6, (adc_bits_width_t)ADC_WIDTH_BIT_12, 1100, &adc_chars);
@@ -172,14 +86,52 @@ void setup()
     } else {
         Serial.println("Default Vref: 1100mV");
     }
+
+    
+    tft.init();
+    tft.setRotation(1);
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextSize(2);
+    tft.setTextColor(TFT_WHITE);
+    tft.setCursor(0, 0);
+    tft.setTextDatum(MC_DATUM);
+    tft.setTextSize(2);
+
+    if (TFT_BL > 0) { // TFT_BL has been set in the TFT_eSPI library in the User Setup file TTGO_T_Display.h
+         pinMode(TFT_BL, OUTPUT); // Set backlight pin to output mode
+         digitalWrite(TFT_BL, TFT_BACKLIGHT_ON); // Turn backlight on. TFT_BACKLIGHT_ON has been set in the TFT_eSPI library in the User Setup file TTGO_T_Display.h
+    }
+
+    tft.setSwapBytes(true);
+    tft.pushImage(0, 0,  240, 135, logo);
+    espDelay(10000);
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("This is a homemade",  tft.width() / 2, tft.height() / 2 );
+    espDelay(2000);
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("Geiger counter.",  tft.width() / 2, tft.height() / 2 );
+    espDelay(2000);
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("USE IT",  tft.width() / 2, tft.height() / 2 );
+    espDelay(2000);
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("AT YOUR OWN",  tft.width() / 2, tft.height() / 2 );
+    espDelay(2000);
+    tft.setTextSize(3);
+    tft.fillScreen(TFT_BLACK);
+    tft.drawString("RISK",  tft.width() / 2, tft.height() / 2 );
+    espDelay(2000);
+    tft.setTextSize(2);
+
 }
 
 
 
 void loop()
 {
-    if (btnCick) {
-        showVoltage();
-    }
-    button_loop();
+    showVoltage();
 }
+
+
+
+  
